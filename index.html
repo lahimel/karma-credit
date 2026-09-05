@@ -608,12 +608,13 @@ footer{background:var(--dk);color:#fff;padding:64px 44px 32px;}
   <div class="rvl">
     <div class="cform">
       <h3 data-i18n="cont_form_h">Send us a message</h3>
-      <div class="fg"><label data-i18n="cont_name">Your Name</label><input type="text" placeholder="e.g. Priya Sharma"></div>
-      <div class="fg"><label>School / Organisation</label><input type="text" placeholder="Your school or organisation"></div>
-      <div class="fg"><label data-i18n="cont_email">Phone or Email</label><input type="email" placeholder="Best way to reach you"></div>
-      <div class="fg"><label data-i18n="cont_iam">I am a...</label><select><option>Student</option><option>Parent</option><option>Teacher / Educator</option><option>School Administrator</option><option>Community Partner</option><option>Other</option></select></div>
-      <div class="fg"><label data-i18n="cont_msg">Message</label><textarea placeholder="Tell us about your interest in reaching out to us..."></textarea></div>
-      <button class="fbtn" onclick="sf(this)" data-i18n="cont_send">Send Message →</button>
+      <div class="fg"><label data-i18n="cont_name">Your Name</label><input id="cf-name" type="text" placeholder="e.g. Priya Sharma"></div>
+      <div class="fg"><label>School / Organisation</label><input id="cf-org" type="text" placeholder="Your school or organisation"></div>
+      <div class="fg"><label data-i18n="cont_email">Phone or Email</label><input id="cf-contact" type="email" placeholder="Best way to reach you"></div>
+      <div class="fg"><label data-i18n="cont_iam">I am a...</label><select id="cf-role"><option>Student</option><option>Parent</option><option>Teacher / Educator</option><option>School Administrator</option><option>Community Partner</option><option>Other</option></select></div>
+      <div class="fg"><label data-i18n="cont_msg">Message</label><textarea id="cf-msg" placeholder="Tell us about your interest in reaching out to us..."></textarea></div>
+      <div id="cf-error" style="display:none;color:#c0392b;font-size:13px;margin-bottom:8px"></div>
+      <button class="fbtn" id="cf-btn" onclick="sf(this)" data-i18n="cont_send">Send Message →</button>
     </div>
   </div>
 
@@ -712,9 +713,61 @@ function tf(btn){
   if(!was) it.classList.add('op');
 }
 
+/* ═══════════════════════════════════════════════
+   CONTACT FORM → GOOGLE SHEET
+   Paste your deployed Apps Script Web App URL below.
+   See GOOGLE-SHEETS-SETUP.md for step-by-step instructions.
+═══════════════════════════════════════════════ */
+const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbzVXkoqTJ6apfFgIaIwiSnMYvT_26ber6gpgJ_2hd3xr4Ow6c2rsUlCZSCwcW0Ochyg/exec";
+
 function sf(btn){
-  btn.textContent='✓ Sent!'; btn.style.background='var(--ol)';
-  setTimeout(()=>{btn.textContent='Send Message →';btn.style.background='';},3000);
+  const errBox = document.getElementById('cf-error');
+  errBox.style.display = 'none';
+
+  const data = {
+    name:    document.getElementById('cf-name').value.trim(),
+    org:     document.getElementById('cf-org').value.trim(),
+    contact: document.getElementById('cf-contact').value.trim(),
+    role:    document.getElementById('cf-role').value,
+    message: document.getElementById('cf-msg').value.trim(),
+  };
+
+  if(!data.name || !data.contact){
+    errBox.textContent = 'Please fill in your name and phone/email.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  if(SHEET_ENDPOINT.indexOf('PASTE_YOUR') === 0){
+    errBox.textContent = 'Form is not connected to Google Sheets yet (see GOOGLE-SHEETS-SETUP.md).';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  fetch(SHEET_ENDPOINT, {
+    method: 'POST',
+    mode: 'no-cors', // Apps Script web apps don't return CORS headers to fetch by default
+    headers: {'Content-Type':'text/plain;charset=utf-8'}, // avoids CORS preflight
+    body: JSON.stringify(data)
+  })
+  .then(()=>{
+    btn.textContent='✓ Sent!'; btn.style.background='var(--ol)'; btn.disabled=false;
+    document.getElementById('cf-name').value='';
+    document.getElementById('cf-org').value='';
+    document.getElementById('cf-contact').value='';
+    document.getElementById('cf-msg').value='';
+    setTimeout(()=>{btn.textContent=originalText;btn.style.background='';},3000);
+  })
+  .catch(()=>{
+    btn.disabled=false;
+    btn.textContent=originalText;
+    errBox.textContent = 'Something went wrong sending your message. Please try again.';
+    errBox.style.display = 'block';
+  });
 }
 
 function toggleNav(){
